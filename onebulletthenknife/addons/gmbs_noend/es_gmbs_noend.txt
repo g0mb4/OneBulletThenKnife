@@ -1,0 +1,99 @@
+// gmb's NoEnd Plugin
+// 2016, gmb
+
+block load
+{
+	es_setinfo gne_bot_t -1
+	es_setinfo gne_bot_ct -1
+	
+	es_setinfo gne_bots_loaded 0
+	
+	mp_roundtime 0
+	mp_timelimit 0
+	mp_winlimit 0
+	mp_maxrounds 0
+	mp_fraglimit 0
+		
+	es_xmsg [GMBsNE] plugin loaded
+}
+
+block unload
+{
+	es_xmsg [GMBsNE] plugin unloaded
+}
+
+block load_models
+{
+	es_xset rm_index_1 0
+	es_xset rm_index_2 0
+	es_xset rm_index_3 0
+	es_xset rm_index_4 0
+
+	es_xset rm_index_5 0
+	es_xset rm_index_6 0
+	es_xset rm_index_7 0
+	es_xset rm_index_8 0
+
+	es_xprecachemodel rm_index_1 "models/player/t_phoenix.mdl"
+	es_xprecachemodel rm_index_2 "models/player/t_leet.mdl"
+	es_xprecachemodel rm_index_3 "models/player/t_arctic.mdl"
+	es_xprecachemodel rm_index_4 "models/player/t_guerilla.mdl"
+
+	es_xprecachemodel rm_index_5 "models/player/ct_urban.mdl"
+	es_xprecachemodel rm_index_6 "models/player/ct_gsg9.mdl"
+	es_xprecachemodel rm_index_7 "models/player/ct_sas.mdl"
+	es_xprecachemodel rm_index_8 "models/player/ct_gign.mdl"
+	
+	es_xmsg [GMBsNE] models precached
+}
+
+block spawn_bots
+{
+	if(server_var(gne_bot_t) == -1) do
+	{
+		es_createbot gne_bot_t "-T Observer-"
+		es_changeteam server_var(gne_bot_t) 2
+	}
+	
+	if(server_var(gne_bot_ct) == -1) do
+	{
+		es_createbot gne_bot_ct "-CT Observer-"
+		es_changeteam server_var(gne_bot_ct) 3
+	}
+
+	es_fire server_var(gne_bot_t) hostage_entity kill
+	es_fire server_var(gne_bot_t) func_rescue_* kill
+	es_fire server_var(gne_bot_t) weapon_c4 kill
+	es_fire server_var(gne_bot_t) func_bomb_* kill
+	
+	// iddle
+	es_setplayerprop server_var(gne_bot_t) CBasePlayer.m_lifeState 256
+	es_setplayerprop server_var(gne_bot_ct) CBasePlayer.m_lifeState 256
+	
+	// no collision
+	es_setplayerprop server_var(gne_bot_t) CBaseEntity.m_CollisionGroup 1
+	es_setplayerprop server_var(gne_bot_ct) CBaseEntity.m_CollisionGroup 1
+	
+	// invisible
+	es est_SetPlayerColor server_var(gne_bot_t) 0 0 0 0 1
+	es est_SetPlayerColor server_var(gne_bot_ct) 0 0 0 0 1
+}
+
+event es_map_start
+{
+	es_setinfo gne_bots_loaded 0
+	
+	es_setinfo gne_bot_t -1
+	es_setinfo gne_bot_ct -1
+}
+
+event round_start
+{
+	if(server_var(gne_bots_loaded) == 0) do 
+	{
+		es_xdoblock onebulletthenknife/addons/gmbs_noend/load_models
+		es_setinfo gne_bots_loaded 1
+	}
+	
+	es_xdoblock onebulletthenknife/addons/gmbs_noend/spawn_bots
+}

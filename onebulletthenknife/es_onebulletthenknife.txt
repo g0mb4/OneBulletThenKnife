@@ -1,0 +1,110 @@
+// OneBulletThenKnife
+// 2016, gmb
+//
+// used plugins:
+//	gg_deathmatch from GunGame Coding Team (cagemonkey,XE_Manup)
+//	gmbs_noend
+//
+
+block load
+{
+	es_xset eventscripts_gg "4.0.96 RC1"
+	es_xmakepublic eventscripts_gg
+
+	//INITIALIZE VARIABLES
+	es_xdoblock onebulletthenknife/init
+	
+	es_xload onebulletthenknife/addons/gg_deathmatch
+	es_xload onebulletthenknife/addons/gmbs_noend
+	
+	es_xmsg -------------------------------------
+	es_xmsg 	OneBulletThenKnife loaded
+	es_xmsg -------------------------------------
+}
+
+block unload
+{	
+	es_xunload onebulletthenknife/addons/gg_deathmatch
+	es_xunload onebulletthenknife/addons/gmbs_noend
+	
+	es_xmsg -------------------------------------
+	es_xmsg      OneBulletThenKnife unloaded
+	es_xmsg -------------------------------------
+}
+
+block init
+{
+	es_xset obtk_bullets_ammo 0
+	es_xset obtk_bullets_clip 0
+	es_xset obtk_bullets 0
+	es_xset obtk_pistol 0
+
+	es_xset gg_tmp 0 "Temp variable holder, Location: player_setup, player_disconnect"
+	es_xset gg_userid 0 "Temp userid, Location: block load, player_activate, player_setup, es_gg_popup_lite"
+	es_xset gg_command 0 "Temp command name, Location: strip_weapons"
+	es_xset gg_killweapon 0 "Used to remove weapons from a map, Location: strip_weapons"
+	es_xset gg_dm_spawn_protect 2 "Spawn protection, Location: config file"
+	es_xset gg_stripweapons "weapon_glock,weapon_p228,weapon_deagle,weapon_fiveseven,weapon_elite,weapon_m3,weapon_xm1014,weapon_tmp,weapon_mac10,weapon_mp5navy,weapon_ump45,weapon_p90,weapon_galil,weapon_famas,weapon_ak47,weapon_scout,weapon_m4a1,weapon_sg552,weapon_aug,weapon_m249,weapon_hegrenade,weapon_g3sg1,weapon_sg550,weapon_awp"
+	
+}
+
+event round_start
+{
+	// Round start code
+	// Remove Weapons Built Into Map & Disable Buyzones
+	es_xgetuserid gg_userid
+	es_fire server_var(gg_userid) func_buyzone disable
+	es_xset gg_tempcount 0
+	while "server_var(gg_tempcount) < 25" "es_xdoblock onebulletthenknife/strip_weapons"
+	
+	// Disable objectives
+	es_fire server_var(gg_userid) func_bomb_target Disable
+	es_fire server_var(gg_userid) func_hostage_rescue Disable
+	es_fire server_var(gg_userid) weapon_c4 Kill
+	es_fire server_var(gg_userid) hostage_entity Kill
+	
+	// Reset entities
+	es_xdelayed 1 es_xdoblock onebulletthenknife/equip_entity
+}
+
+event player_spawn
+{
+	es_give event_var(userid) weapon_knife
+	es_give event_var(userid) weapon_usp
+	es playerset ammo event_var(userid) weapon_usp 0
+	es playerset clip event_var(userid) weapon_usp 1
+	
+	es playerget secondary obtk_pistol event_var(userid)
+	// /cstrike/cfg/es_tools.cfg -> est_enable_weapon_mods 1
+	es est_modweapon server_var(obtk_pistol) 1000
+}
+
+event player_death
+{
+	es playerget secondary obtk_pistol event_var(attacker)
+	es playerget ammo obtk_bullets_ammo event_var(attacker) server_var(obtk_pistol)
+	es playerget clip obtk_bullets_clip event_var(attacker) server_var(obtk_pistol)
+		
+	es_math obtk_bullets_ammo sub server_var(obtk_bullets_clip)
+	es_math obtk_bullets_ammo add 1
+	
+	es playerset ammo event_var(attacker) server_var(obtk_pistol) server_var(obtk_bullets_ammo)
+}
+
+block equip_entity
+{
+	es_xgetuserid gg_userid
+	es_xremove game_player_equip
+	es_give server_var(gg_userid) game_player_equip
+	es_fire server_var(gg_userid) game_player_equip addoutput "weapon_knife 1"
+	es_fire server_var(gg_userid) game_player_equip addoutput "item_assaultsuit 1"
+}
+
+block strip_weapons
+{
+	//Remove Weapons Built Into Map
+	es_xmath gg_tempcount + 1
+	es_token gg_killweapon server_var(gg_stripweapons) server_var(gg_tempcount) ,
+	es_xformatv gg_command "%1 %2 kill" gg_userid gg_killweapon
+	esnq es_xfire server_var(gg_command)
+}
